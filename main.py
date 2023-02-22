@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import re
 import sys
@@ -12,7 +13,7 @@ def cmdline_args():
     p.add_argument("-r", "--recursive", help="Required if path is a directory of Tools",
                    default=False, action="store_true")
     p.add_argument(
-        "-o", "--output", help="If not specified, output is stdout", choices=["stdout", "readme", "txt"], type=str, required=False)
+        "-o", "--output", help="If not specified, output is stdout", choices=["stdout", "readme"], type=str, required=False)
     return p.parse_args()
 
 
@@ -20,6 +21,11 @@ def get_src_file(path):
     tool_name = os.path.basename(os.path.normpath(path))
     src_file = f"{path}/{tool_name}.cpp"
     return src_file
+
+
+def get_readme_file(path):
+    readme_file = f"{path}/README.md"
+    return readme_file
 
 
 def print_output(m_vars, m_data_get, m_data_set, skipped):
@@ -37,7 +43,7 @@ def pretty_output(m_vars, m_data_get, m_data_set, skipped):
     print("-"*60)
     for var in m_vars:
         print(var[0], " "*(40-len(var[0])), var[1])
-        #print(f"{var[0]}: (assigned to variable name {var[1]})")
+        # print(f"{var[0]}: (assigned to variable name {var[1]})")
     print("\n")
     print("The following keys are retrieved ('Get') from the DataModel:")
     print("Store", " "*15, "Key", " "*17, "Variable")
@@ -58,8 +64,38 @@ def pretty_output(m_vars, m_data_get, m_data_set, skipped):
         print(var)
 
 
-def write_output(m_vars, m_data_get, m_data_set, skipped):
-    pass
+def output_markdown(m_vars, m_data_get, m_data_set, skipped, readme_file):
+    with open(readme_file, "a") as f:
+        f.write("\n***\n")
+        f.write("## ToolDocumentor:\n")
+        f.write(
+            "These are all the interactions between this Tool and the DataModel:\n\n\n")
+        f.write("The following m_variables are read from the config file:\n")
+        f.write("|Key|Variable|\n")
+        f.write("|---|---|\n")
+        for var in m_vars:
+            f.write(f"|{var[0]}|`{var[1]}`|\n")
+            # f.write(f"{var[0]}: (assigned to variable name {var[1]})\n")
+        f.write("\n")
+        f.write("The following keys are retrieved (`Get`) from the DataModel:\n")
+        f.write("|Store|Key|Variable|\n")
+        f.write("|---|---|---|\n")
+        for var in m_data_get:
+            f.write(f"|{var[0]}|{var[1]}|`{var[2]}`|\n")
+        f.write("\n")
+        f.write("The following keys are stored (`Set`) in the DataModel:\n")
+        f.write("|Store|Key|Variable|\n")
+        f.write("|---|---|---|\n")
+        for var in m_data_set:
+            f.write(f"|{var[0]}|{var[1]}|`{var[2]}`|\n")
+        f.write("\n")
+        f.write("The following interactions with the DataModel were skipped:\n")
+        if skipped:
+            for var in skipped:
+                f.write(f'`{var}` \n')
+        f.write(
+            f"\n\nThis documentation was automatically generated. Last updated: {datetime.datetime.now().date()}\n")
+        f.write("\n***\n")
 
 
 def scan_tool(filename):
@@ -72,6 +108,10 @@ def scan_tool(filename):
         skipped = []
         m_vars_tokens = re.findall(r"m_variables.*;", code)
         m_data_tokens = re.findall(r"m_data->Stores.*;", code)
+        # Trying out a different regex to avoid matching commented out lines, not working yet?
+        # m_vars_tokens = re.findall(r"(?!\/\/\s)(?!\/\/).m_variables.*;", code)
+        # m_data_tokens = re.findall(
+        #     r"(?!\/\/\s)(?!\/\/).m_data->Stores.*;", code)
         for token in m_vars_tokens:
             # m_variables should only be "get"s
             if "Get" in token:
@@ -132,12 +172,11 @@ def scan_tool(filename):
 
 if __name__ == "__main__":
     args = cmdline_args()
-    breakpoint()
+    dirname = os.path.abspath(args.path)
     if args.recursive:
         if not os.path.isdir(args.path):
             print("Path must be a directory if recursive is specified")
             sys.exit(1)
-        dirname = os.path.abspath(args.path)
         for filename in os.listdir(dirname):
             if not os.path.exists(f"{dirname}/{filename}/{filename}.cpp"):
                 print(
@@ -145,8 +184,16 @@ if __name__ == "__main__":
                 continue
             m_vars, m_data_get, m_data_set, skipped = scan_tool(
                 f"{dirname}/{filename}/{filename}.cpp")
-            print_output(m_vars, m_data_get, m_data_set, skipped)
+            if args.output == "readme":
+                output_markdown(m_vars, m_data_get, m_data_set,
+                                skipped, get_readme_file(f"{dirname}/{filename}"))
+            else:
+                print_output(m_vars, m_data_get, m_data_set, skipped)
     else:
         filename = get_src_file(args.path)
         m_vars, m_data_get, m_data_set, skipped = scan_tool(filename)
-        pretty_output(m_vars, m_data_get, m_data_set, skipped)
+        if args.output == "readme":
+            output_markdown(m_vars, m_data_get, m_data_set,
+                            skipped, get_readme_file(dirname))
+        else:
+            print_output(m_vars, m_data_get, m_data_set, skipped)
