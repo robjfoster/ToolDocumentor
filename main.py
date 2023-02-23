@@ -3,9 +3,10 @@ import datetime
 import os
 import re
 import sys
+from typing import List
 
 
-def cmdline_args():
+def cmdline_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="This script tracks a Tool's interactions with the DataModel and documents them.")
     p.add_argument(
@@ -17,18 +18,22 @@ def cmdline_args():
     return p.parse_args()
 
 
-def get_src_file(path):
+def get_src_file(path: str) -> str:
     tool_name = os.path.basename(os.path.normpath(path))
     src_file = f"{path}/{tool_name}.cpp"
     return src_file
 
 
-def get_readme_file(path):
+def get_readme_file(path: str) -> str:
     readme_file = f"{path}/README.md"
     return readme_file
 
 
-def print_output(m_vars, m_data_get, m_data_set, skipped):
+def print_output(m_vars: List[str],
+                 m_data_get: List[str],
+                 m_data_set: List[str],
+                 skipped: List[str]
+                 ) -> None:
     print("ToolDocumentor output:\n")
     print("m_variables:", m_vars, "\n")
     print("m_data->Stores->Get:", m_data_get, "\n")
@@ -36,14 +41,17 @@ def print_output(m_vars, m_data_get, m_data_set, skipped):
     print("Skipped:", skipped, "\n")
 
 
-def pretty_output(m_vars, m_data_get, m_data_set, skipped):
+def pretty_output(m_vars: List[str],
+                  m_data_get: List[str],
+                  m_data_set: List[str],
+                  skipped: List[str]
+                  ) -> None:
     print("ToolDocumentor output:\n")
     print("The following m_variables are read from the config file:")
     print("Key", " "*37, "Variable")
     print("-"*60)
     for var in m_vars:
         print(var[0], " "*(40-len(var[0])), var[1])
-        # print(f"{var[0]}: (assigned to variable name {var[1]})")
     print("\n")
     print("The following keys are retrieved ('Get') from the DataModel:")
     print("Store", " "*15, "Key", " "*17, "Variable")
@@ -64,7 +72,12 @@ def pretty_output(m_vars, m_data_get, m_data_set, skipped):
         print(var)
 
 
-def output_markdown(m_vars, m_data_get, m_data_set, skipped, readme_file):
+def output_markdown(m_vars: List[str],
+                    m_data_get: List[str],
+                    m_data_set: List[str],
+                    skipped: List[str],
+                    readme_file: str
+                    ) -> None:
     with open(readme_file, "a") as f:
         f.write("\n***\n")
         f.write("## ToolDocumentor:\n")
@@ -98,7 +111,7 @@ def output_markdown(m_vars, m_data_get, m_data_set, skipped, readme_file):
         f.write("\n***\n")
 
 
-def scan_tool(filename):
+def scan_tool(filename: str) -> tuple(List[str], List[str], List[str], List[str]):
     with open(filename, "r") as f:
         # Just load the entire file into memory, files shouldn't be too big
         code = f.read()
@@ -122,8 +135,6 @@ def scan_tool(filename):
                 m_vars.append((key_string, var_name))
         for token in m_data_tokens:
             if ".count" in token:
-                # print(token)
-                # print("Count statement, skipping")
                 skipped.append(token)
                 continue
             try:
