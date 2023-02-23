@@ -4,6 +4,8 @@ ToolDocumentor is a script for automatically generating documentation for ToolAn
 
 Note that the documentor cannot capture DataModel interactions where the key is a string variable, the key must be hardcoded. It may also trip up if the file has weird whitespacing.
 
+Requries python>3.6
+
 ```
 usage: main.py [-h] [-r] [-o {stdout,readme}] path
 
@@ -18,4 +20,4 @@ options:
   -r, --recursive       Required if path is a directory of Tools
   -o {stdout,readme}, --output {stdout,readme}
                         If not specified, output is stdout
- ```
+```
