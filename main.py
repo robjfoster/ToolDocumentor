@@ -111,10 +111,10 @@ def output_markdown(m_vars: List[tuple[str, str]],
         f.write("\n***\n")
 
 
-def scan_tool(filename: str) -> tuple(List[tuple[str, str]],
+def scan_tool(filename: str) -> tuple[List[tuple[str, str]],
                                       List[tuple[str, str, str]],
                                       List[tuple[str, str, str]],
-                                      List[tuple[str]]):
+                                      List[tuple[str]]]:
     with open(filename, "r") as f:
         # Just load the entire file into memory, files shouldn't be too big
         code = f.read()
